@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Chat Room</title>
+        <script>
+            var sala = prompt("Digite o nome da sala:");
+            var socket = new WebSocket(`ws://localhost:8765/${sala}`);
+
+            socket.onopen = function (event) {
+                console.log("Conexão aberta");
+                socket.send("Entrou na sala!");
+            };
+
+            socket.onmessage = function (event) {
+                console.log("Recebido do servidor: ", event.data);
+                exibirMensagem(event.data);
+            };
+
+            function enviarMensagem() {
+                var mensagem = document.getElementById("mensagem").value;
+                socket.send(mensagem);
+                document.getElementById("mensagem").value = "";
+                exibirMensagem(`Você: ${mensagem}`);
+            }
+
+            function exibirMensagem(mensagem) {
+                var div = document.createElement("div");
+                div.textContent = mensagem;
+                document.body.appendChild(div);
+            }
+        </script>
+    </head>
+    <body>
+        <h1>Chat Room - Sala: <span id="salaNome"></span></h1>
+        <div id="chat"></div>
+        <input type="text" id="mensagem" placeholder="Digite sua mensagem..." />
+        <button onclick="enviarMensagem()">Enviar</button>
+
+        <script>
+            document.getElementById("salaNome").innerText = sala;
+        </script>
+    </body>
+</html>
