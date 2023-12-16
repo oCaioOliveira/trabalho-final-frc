@@ -1,43 +1,85 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Chat Room</title>
+        <title>Escolha a Sala</title>
         <script>
-            var sala = prompt("Digite o nome da sala:");
-            var socket = new WebSocket(`ws://localhost:8765/${sala}`);
+            var socket;
+            var nome;
 
-            socket.onopen = function (event) {
-                console.log("Conexão aberta");
-                socket.send("Entrou na sala!");
-            };
+            function entrarNaSala() {
+                nome = prompt("Digite seu nome:");
+                if (nome.trim() === "") {
+                    alert("Por favor, preencha seu nome.");
+                    return;
+                }
 
-            socket.onmessage = function (event) {
-                console.log("Recebido do servidor: ", event.data);
-                exibirMensagem(event.data);
-            };
+                var sala = prompt("Digite o nome da sala:");
+                if (sala.trim() === "") {
+                    alert("Por favor, preencha o nome da sala.");
+                    return;
+                }
 
-            function enviarMensagem() {
-                var mensagem = document.getElementById("mensagem").value;
-                socket.send(mensagem);
-                document.getElementById("mensagem").value = "";
-                exibirMensagem(`Você: ${mensagem}`);
+                socket = new WebSocket(`ws://192.168.0.112:8765/${sala}`);
+
+                socket.onopen = function (event) {
+                    console.log("Conexão aberta");
+                    socket.send(`Entrou na sala ${sala} como ${nome}`);
+                    exibirChat();
+                };
+
+                socket.onmessage = function (event) {
+                    console.log("Recebido do servidor: ", event.data);
+                    exibirMensagem(event.data);
+                };
+
+                function exibirChat() {
+                    document.getElementById("telaEscolha").style.display =
+                        "none";
+                    document.getElementById("telaChat").style.display = "block";
+                    document.getElementById("salaNome").innerText = sala;
+                }
+
+                document.getElementById("enviar").onclick = function () {
+                    enviarMensagem();
+                };
+
+                function enviarMensagem() {
+                    var mensagem = document.getElementById("mensagem").value;
+                    socket.send(`${nome}: ${mensagem}`);
+                    document.getElementById("mensagem").value = "";
+                    exibirMensagem(`Você: ${mensagem}`);
+                }
+
+                function exibirMensagem(mensagem) {
+                    var div = document.createElement("div");
+                    div.textContent = mensagem;
+                    document.getElementById("chat").appendChild(div);
+                }
             }
 
-            function exibirMensagem(mensagem) {
-                var div = document.createElement("div");
-                div.textContent = mensagem;
-                document.body.appendChild(div);
+            function voltarParaEscolha() {
+                document.getElementById("telaEscolha").style.display = "block";
+                document.getElementById("telaChat").style.display = "none";
+                socket.close();
             }
         </script>
     </head>
     <body>
-        <h1>Chat Room - Sala: <span id="salaNome"></span></h1>
-        <div id="chat"></div>
-        <input type="text" id="mensagem" placeholder="Digite sua mensagem..." />
-        <button onclick="enviarMensagem()">Enviar</button>
+        <div id="telaEscolha">
+            <h1>Escolha a Sala</h1>
+            <button onclick="entrarNaSala()">Entrar na Sala</button>
+        </div>
 
-        <script>
-            document.getElementById("salaNome").innerText = sala;
-        </script>
+        <div id="telaChat" style="display: none">
+            <h1>Chat Room - Sala: <span id="salaNome"></span></h1>
+            <div id="chat"></div>
+            <input
+                type="text"
+                id="mensagem"
+                placeholder="Digite sua mensagem..."
+            />
+            <button id="enviar">Enviar</button>
+            <button onclick="voltarParaEscolha()">Voltar para Escolha</button>
+        </div>
     </body>
 </html>
