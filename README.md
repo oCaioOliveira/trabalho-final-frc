@@ -8,7 +8,7 @@ Nome Completo | Matrícula |
 ------------- | --------- |
 Caio César Oliveira | 190085291 |
 Guilherme Nishimura | 200 |
-Matheus Costa Gomes | 190 |
+Matheus Costa Gomes | 190093331 |
 Vitor Eduardo Kühl Rodrigues | 190 |
 
 ## Instruções para utilizar a configuração do DNS para acesso via URL
