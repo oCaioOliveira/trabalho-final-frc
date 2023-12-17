@@ -82,12 +82,67 @@
                     transform: rotate(360deg);
                 }
             }
+
+            video {
+                width: 100%;
+                height: auto;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
+
+            #localVideo {
+                width: 30%;
+                height: auto;
+                border: 1px solid #ccc;
+                border-radius: 5px;
+                margin-bottom: 10px;
+            }
         </style>
         <script>
             var socket;
             var nome;
             var cor;
             var salaAtual;
+            var localStream;
+            var localVideo = document.getElementById("localVideo");
+            var videoContainer = document.getElementById("videos");
+
+            async function iniciarVideo(deviceId) {
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: deviceId } },
+                        audio: false,
+                    });
+                    localVideo = document.getElementById("localVideo");
+                    localVideo.srcObject = localStream;
+                } catch (error) {
+                    console.error("Erro ao capturar vídeo:", error);
+                }
+            }
+
+            function adicionarVideo(stream) {
+                var newVideo = document.createElement("video");
+                newVideo.srcObject = stream;
+                newVideo.autoplay = true;
+                newVideo.playsinline = true;
+                videoContainer.appendChild(newVideo);
+            }
+
+            function removerVideo(nomeParticipante) {
+                var videos = document.querySelectorAll("video");
+                videos.forEach(function (video) {
+                    if (
+                        video.srcObject &&
+                        video.srcObject.id === nomeParticipante
+                    ) {
+                        video.srcObject.getTracks().forEach(function (track) {
+                            track.stop();
+                        });
+                        video.remove();
+                    }
+                });
+            }
 
             function entrarNaSala() {
                 nome = prompt("Digite seu nome:");
@@ -159,7 +214,51 @@
                     div.textContent = mensagem;
                     div.style.color = cor || "black";
                     document.getElementById("chat").appendChild(div);
+
+                    if (mensagem.includes("Entrou na sala")) {
+                        exibirDispositivos();
+                    } else if (mensagem.includes("saiu da sala")) {
+                        removerVideo();
+                    }
                 }
+
+                exibirDispositivos();
+            }
+
+            function exibirDispositivos() {
+                navigator.mediaDevices
+                    .enumerateDevices()
+                    .then(function (devices) {
+                        var videoDevices = devices.filter(
+                            (device) => device.kind === "videoinput"
+                        );
+                        var select = document.createElement("select");
+                        select.setAttribute("id", "cameraSelect");
+
+                        videoDevices.forEach(function (device) {
+                            var option = document.createElement("option");
+                            option.value = device.deviceId;
+                            option.text =
+                                device.label || `Câmera ${select.length + 1}`;
+                            select.appendChild(option);
+                        });
+
+                        var submitButton = document.createElement("button");
+                        submitButton.textContent = "Selecionar Câmera";
+                        submitButton.onclick = function () {
+                            var selectedDeviceId = select.value;
+                            iniciarVideo(selectedDeviceId);
+                        };
+
+                        var cameraContainer =
+                            document.getElementById("cameraContainer");
+                        cameraContainer.innerHTML = "";
+                        cameraContainer.appendChild(select);
+                        cameraContainer.appendChild(submitButton);
+                    })
+                    .catch(function (error) {
+                        console.error("Erro ao obter dispositivos:", error);
+                    });
             }
 
             function voltarParaEscolha() {
@@ -198,6 +297,12 @@
             />
             <button id="enviar">Enviar</button>
             <button onclick="voltarParaEscolha()">Voltar para Escolha</button>
+        </div>
+
+        <div id="cameraContainer"></div>
+
+        <div id="videos">
+            <video id="localVideo" autoplay muted></video>
         </div>
     </body>
 </html>
