@@ -26,4 +26,34 @@ A configuração DNS utilizada foi uma solução apenas para execuções da apli
     - `chmod +x ./add_hosts.sh`
   - Após isso executar esse script como **sudo**, comando:
       - `sudo ./add_hosts.sh` 
+## Instruções para receber conexões HTTP e HTTPS
+
+Para preparar o servidor Apache para receber conexões HTTP e HTTPS no Ubuntu, você pode seguir os seguintes passos:
+- **Manualmente** no ambiente Linux:
+  
+  - Instale o Apache:
+    
+    - `sudo apt update`
+    
+    - `sudo apt install apache2`
+    
+  - Habilite o módulo SSL do Apache:
+    
+    - `sudo a2enmod ssl`
+   
+- Configure o Firewall para permitir conexões HTTP e HTTPS:
+
+     - `sudo ufw allow http`
+    
+    - `sudo ufw allow https`
+ 
+ -Configure o Apache para usar SSL
+
+
+- **Automaticamente** por meio de um script:
+  - Acessar a pasta `scripts` nesse repositório e dar permissão ao script `add_hosts.sh`, comando:
+    - `chmod +x ./add_hosts.sh`
+  - Após isso executar esse script como **sudo**, comando:
+      - `sudo ./add_hosts.sh` 
+
 
