@@ -19,7 +19,7 @@
                     return;
                 }
 
-                socket = new WebSocket(`ws://192.168.0.112:8765/${sala}`);
+                socket = new WebSocket(`ws://ip-desejado:8765/${sala}`);
 
                 socket.onopen = function (event) {
                     console.log("Conexão aberta");
