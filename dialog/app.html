@@ -5,6 +5,7 @@
         <script>
             var socket;
             var nome;
+            var historicoPorSala = {};
 
             function entrarNaSala() {
                 nome = prompt("Digite seu nome:");
@@ -29,7 +30,11 @@
 
                 socket.onmessage = function (event) {
                     console.log("Recebido do servidor: ", event.data);
-                    exibirMensagem(event.data);
+                    exibirMensagem(event.data, sala);
+                };
+
+                socket.onclose = function () {
+                    exibirMensagem(`Fim do histórico na Sala ${sala}`, sala);
                 };
 
                 function exibirChat() {
@@ -37,6 +42,7 @@
                         "none";
                     document.getElementById("telaChat").style.display = "block";
                     document.getElementById("salaNome").innerText = sala;
+                    exibirHistorico(sala);
                 }
 
                 document.getElementById("enviar").onclick = function () {
@@ -47,13 +53,27 @@
                     var mensagem = document.getElementById("mensagem").value;
                     socket.send(`${nome}: ${mensagem}`);
                     document.getElementById("mensagem").value = "";
-                    exibirMensagem(`Você: ${mensagem}`);
+                    exibirMensagem(`Você: ${mensagem}`, sala);
                 }
 
-                function exibirMensagem(mensagem) {
+                function exibirMensagem(mensagem, sala) {
+                    if (!historicoPorSala[sala]) {
+                        historicoPorSala[sala] = [];
+                    }
+                    historicoPorSala[sala].push(mensagem);
+
                     var div = document.createElement("div");
                     div.textContent = mensagem;
                     document.getElementById("chat").appendChild(div);
+                }
+
+                function exibirHistorico(sala) {
+                    var historico = historicoPorSala[sala];
+                    if (historico) {
+                        historico.forEach(function (mensagem) {
+                            exibirMensagem(mensagem, sala);
+                        });
+                    }
                 }
             }
 
