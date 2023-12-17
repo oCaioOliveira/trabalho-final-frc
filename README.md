@@ -7,7 +7,7 @@ Trabalho final da disciplina de Fundamentos de Redes de Computadores.
 Nome Completo | Matrícula |
 ------------- | --------- |
 Caio César Oliveira | 190085291 |
-Guilherme Nishimura | 200 |
+Guilherme Nishimura | 200030264 |
 Matheus Costa Gomes | 190093331 |
 Vitor Eduardo Kühl Rodrigues | 190 |
 
