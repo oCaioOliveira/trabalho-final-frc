@@ -2,10 +2,92 @@
 <html>
     <head>
         <title>Escolha a Sala</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f2f2f2;
+                margin: 0;
+                padding: 0;
+            }
+
+            #telaEscolha,
+            #telaChat {
+                width: 80%;
+                max-width: 600px;
+                margin: 20px auto;
+                background-color: #fff;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            }
+
+            #telaChat {
+                display: none;
+            }
+
+            h1 {
+                color: #333;
+            }
+
+            #chat {
+                max-height: 300px;
+                overflow-y: auto;
+                margin-bottom: 10px;
+                padding: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            input[type="text"] {
+                width: calc(100% - 22px);
+                padding: 10px;
+                margin-bottom: 10px;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+
+            button {
+                padding: 10px;
+                background-color: #4caf50;
+                color: #fff;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+            #enviar {
+                margin-right: 10px;
+            }
+
+            .loader {
+                border: 4px solid rgba(0, 0, 0, 0.1);
+                border-top: 4px solid #3498db;
+                border-radius: 50%;
+                width: 30px;
+                height: 30px;
+                animation: spin 1s linear infinite;
+                margin-right: 5px;
+                display: none;
+            }
+
+            @keyframes spin {
+                0% {
+                    transform: rotate(0deg);
+                }
+                100% {
+                    transform: rotate(360deg);
+                }
+            }
+        </style>
         <script>
             var socket;
             var nome;
-            var historicoPorSala = {};
+            var cor;
+            var salaAtual;
 
             function entrarNaSala() {
                 nome = prompt("Digite seu nome:");
@@ -20,29 +102,45 @@
                     return;
                 }
 
-                socket = new WebSocket(`ws://ip-desejado:8765/${sala}`);
+                if (socket) {
+                    socket.send(`Saindo da sala ${salaAtual}`);
+                    socket.close();
+                }
+
+                salaAtual = sala;
+
+                document.getElementById("loader").style.display =
+                    "inline-block";
+
+                socket = new WebSocket(`ws://192.168.0.112:8765/${sala}`);
 
                 socket.onopen = function (event) {
                     console.log("Conexão aberta");
                     socket.send(`Entrou na sala ${sala} como ${nome}`);
-                    exibirChat();
+                    exibirChat(`Entrou na sala ${sala} como ${nome}`, "black");
                 };
 
                 socket.onmessage = function (event) {
                     console.log("Recebido do servidor: ", event.data);
-                    exibirMensagem(event.data, sala);
+                    exibirMensagem(event.data);
                 };
 
-                socket.onclose = function () {
-                    exibirMensagem(`Fim do histórico na Sala ${sala}`, sala);
+                socket.onclose = function (event) {
+                    exibirChat(
+                        `Fim de histórico da sala ${salaAtual}`,
+                        "black"
+                    );
+                    socket = null;
+                    salaAtual = null;
+                    document.getElementById("loader").style.display = "none";
                 };
 
-                function exibirChat() {
+                function exibirChat(mensagem, cor) {
                     document.getElementById("telaEscolha").style.display =
                         "none";
                     document.getElementById("telaChat").style.display = "block";
                     document.getElementById("salaNome").innerText = sala;
-                    exibirHistorico(sala);
+                    exibirMensagem(mensagem, cor);
                 }
 
                 document.getElementById("enviar").onclick = function () {
@@ -53,34 +151,33 @@
                     var mensagem = document.getElementById("mensagem").value;
                     socket.send(`${nome}: ${mensagem}`);
                     document.getElementById("mensagem").value = "";
-                    exibirMensagem(`Você: ${mensagem}`, sala);
+                    exibirMensagem(`Você: ${mensagem}`, "black");
                 }
 
-                function exibirMensagem(mensagem, sala) {
-                    if (!historicoPorSala[sala]) {
-                        historicoPorSala[sala] = [];
-                    }
-                    historicoPorSala[sala].push(mensagem);
-
+                function exibirMensagem(mensagem, cor) {
                     var div = document.createElement("div");
                     div.textContent = mensagem;
+                    div.style.color = cor || "black";
                     document.getElementById("chat").appendChild(div);
-                }
-
-                function exibirHistorico(sala) {
-                    var historico = historicoPorSala[sala];
-                    if (historico) {
-                        historico.forEach(function (mensagem) {
-                            exibirMensagem(mensagem, sala);
-                        });
-                    }
                 }
             }
 
             function voltarParaEscolha() {
+                if (socket && salaAtual) {
+                    socket.send(`${nome} saiu da sala ${salaAtual}.`);
+                    socket.onclose = function () {};
+                    socket.close();
+                    var div = document.createElement("div");
+                    div.textContent = `Fim de histórico da sala ${salaAtual}.`;
+                    div.style.color = cor || "red";
+                    socket = null;
+                    salaAtual = null;
+                    document.getElementById("chat").appendChild(div);
+                    document.getElementById("loader").style.display = "none";
+                }
+
                 document.getElementById("telaEscolha").style.display = "block";
                 document.getElementById("telaChat").style.display = "none";
-                socket.close();
             }
         </script>
     </head>
@@ -88,9 +185,10 @@
         <div id="telaEscolha">
             <h1>Escolha a Sala</h1>
             <button onclick="entrarNaSala()">Entrar na Sala</button>
+            <div id="loader" class="loader"></div>
         </div>
 
-        <div id="telaChat" style="display: none">
+        <div id="telaChat">
             <h1>Chat Room - Sala: <span id="salaNome"></span></h1>
             <div id="chat"></div>
             <input
