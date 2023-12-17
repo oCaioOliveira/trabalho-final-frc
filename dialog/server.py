@@ -21,7 +21,7 @@ async def server(websocket, path):
         salas[sala].remove(websocket)
 
 
-start_server = websockets.serve(server, "ip-desejado", 8765)
+start_server = websockets.serve(server, "192.168.0.112", 8765)
 
 asyncio.get_event_loop().run_until_complete(start_server)
 asyncio.get_event_loop().run_forever()
