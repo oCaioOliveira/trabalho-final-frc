@@ -46,6 +46,11 @@ Para preparar o servidor Apache para receber conexões HTTP e HTTPS no Ubuntu, v
      - `sudo ufw allow http`
     
     - `sudo ufw allow https`
+      
+    - Crie um Certificado SSL autoassinado: Para conexões HTTPS, é necessário certificado SSL:
+
+     - 'sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/apache-selfsigned.key -out /etc/ssl/certs/apache-selfsigned.crt'
+
  
  -Configure o Apache para usar SSL
 
