@@ -11,6 +11,7 @@
             }
 
             #telaEscolha,
+            #telaListaSalas,
             #telaChat {
                 width: 80%;
                 max-width: 600px;
@@ -98,6 +99,28 @@
                 border-radius: 5px;
                 margin-bottom: 10px;
             }
+
+            .salas-lista {
+                list-style-type: none;
+                padding: 0;
+                font-family: Arial, sans-serif;
+                background-color: #f9f9f9;
+                border-radius: 5px;
+                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                max-width: 300px;
+                margin: 10px auto;
+                cursor: pointer;
+            }
+
+            .salas-lista li {
+                padding: 10px;
+                border-bottom: 1px solid #ccc;
+                transition: background-color 0.3s ease;
+            }
+
+            .salas-lista li:hover {
+                background-color: #e5e5e5;
+            }
         </style>
         <script>
             var socket;
@@ -144,17 +167,25 @@
                 });
             }
 
-            function entrarNaSala() {
+            async function entrarNaSala() {
                 nome = prompt("Digite seu nome:");
                 if (nome.trim() === "") {
                     alert("Por favor, preencha seu nome.");
                     return;
                 }
 
-                var sala = prompt("Digite o nome da sala:");
-                if (sala.trim() === "") {
-                    alert("Por favor, preencha o nome da sala.");
-                    return;
+                var escolha = prompt(
+                    "Deseja entrar em uma sala existente? (S/N)"
+                ).toUpperCase();
+                var sala;
+                if (escolha === "S") {
+                    sala = await listarSalasESelecionar();
+                } else {
+                    sala = prompt("Digite o nome da sala:");
+                    if (sala.trim() === "") {
+                        alert("Por favor, preencha o nome da sala.");
+                        return;
+                    }
                 }
 
                 if (socket) {
@@ -223,6 +254,70 @@
                 }
 
                 exibirDispositivos();
+            }
+
+            function listarSalasESelecionar() {
+                const socket = new WebSocket("ws://192.168.0.112:8766");
+
+                const socketOpen = new Promise((resolve) => {
+                    socket.onopen = () => resolve();
+                });
+
+                socketOpen.then(() => {
+                    socket.send("listar_salas");
+                });
+
+                return new Promise((resolve) => {
+                    socket.onmessage = (event) => {
+                        const salasDisponiveis = JSON.parse(event.data);
+                        const listaSalas =
+                            document.getElementById("listaSalas");
+                        listaSalas.innerHTML = "";
+
+                        const telaListaSalas =
+                            document.getElementById("telaListaSalas");
+                        const backButton =
+                            document.getElementById("backButton");
+
+                        if (!backButton) {
+                            const newBackButton =
+                                document.createElement("button");
+                            newBackButton.textContent = "Voltar";
+                            newBackButton.id = "backButton";
+                            newBackButton.addEventListener("click", () => {
+                                telaListaSalas.style.display = "none";
+                                document.getElementById(
+                                    "telaEscolha"
+                                ).style.display = "block";
+                            });
+                            telaListaSalas.appendChild(newBackButton);
+                        }
+
+                        salasDisponiveis.forEach((sala) => {
+                            const listItem = document.createElement("li");
+                            listItem.textContent = sala;
+                            listItem.style.cursor = "pointer";
+                            listItem.addEventListener("click", () => {
+                                socket.close();
+                                resolve(sala);
+                                document.getElementById(
+                                    "telaListaSalas"
+                                ).style.display = "none";
+                                document.getElementById(
+                                    "telaEscolha"
+                                ).style.display = "block";
+                            });
+                            listaSalas.appendChild(listItem);
+                        });
+
+                        if (salasDisponiveis.length > 0) {
+                            telaListaSalas.style.display = "block";
+                            document.getElementById(
+                                "telaEscolha"
+                            ).style.display = "none";
+                        }
+                    };
+                });
             }
 
             function exibirDispositivos() {
@@ -297,6 +392,12 @@
             />
             <button id="enviar">Enviar</button>
             <button onclick="voltarParaEscolha()">Voltar para Escolha</button>
+        </div>
+
+        <div id="telaListaSalas" style="display: none">
+            <h1>Escolha a Sala</h1>
+            <ul id="listaSalas" class="salas-lista"></ul>
+            <div id="loader" class="loader"></div>
         </div>
 
         <div id="cameraContainer"></div>
