@@ -179,7 +179,7 @@
                 document.getElementById("loader").style.display =
                     "inline-block";
 
-                socket = new WebSocket(`ws://192.168.0.112:8765/${sala}`);
+                socket = new WebSocket(`ws://localhost:8765/${sala}`);
 
                 socket.onopen = function (event) {
                     console.log("Conexão aberta");
@@ -259,7 +259,7 @@
             }
 
             function listarSalasESelecionar() {
-                const socket = new WebSocket("ws://192.168.0.112:8766");
+                const socket = new WebSocket("ws://localhost:8766");
 
                 const socketOpen = new Promise((resolve) => {
                     socket.onopen = () => resolve();
