@@ -128,6 +128,8 @@
             var cor;
             var salaAtual;
             var localStream;
+            let maoLevantada = false;
+            let contadorMaosLevantadas = 0;
             var localVideo = document.getElementById("localVideo");
             var videoContainer = document.getElementById("videos");
 
@@ -207,9 +209,30 @@
                 };
 
                 socket.onmessage = function (event) {
-                    console.log("Recebido do servidor: ", event.data);
-                    exibirMensagem(event.data);
+                    const mensagem = event.data;
+
+                    if (mensagem.includes("levantou a mão")) {
+                        mostrarMaoIcon();
+                        contadorMaosLevantadas++;
+                        updateMaoIcon();
+                    } else if (mensagem.includes("abaixou a mão")) {
+                        esconderMaoIcon();
+                        contadorMaosLevantadas--;
+                        updateMaoIcon();
+                    }
+
+                    exibirMensagem(mensagem);
                 };
+
+                function mostrarMaoIcon() {
+                    const maoIcon = document.getElementById("maoIcon");
+                    maoIcon.style.display = "inline-block";
+                }
+
+                function esconderMaoIcon() {
+                    const maoIcon = document.getElementById("maoIcon");
+                    maoIcon.style.display = "none";
+                }
 
                 socket.onclose = function (event) {
                     exibirChat(
@@ -373,6 +396,34 @@
                 document.getElementById("telaEscolha").style.display = "block";
                 document.getElementById("telaChat").style.display = "none";
             }
+
+            function toggleMao() {
+                const nomeUsuario = nome;
+                const mensagem = `${nomeUsuario} levantou a mão`;
+
+                const levantarMaoButton =
+                    document.getElementById("levantarMaoButton");
+
+                if (!maoLevantada) {
+                    maoLevantada = true;
+                    levantarMaoButton.style.backgroundColor = "green";
+                    socket.send(mensagem);
+                    contadorMaosLevantadas++;
+                } else {
+                    maoLevantada = false;
+                    levantarMaoButton.style.backgroundColor = "";
+                    socket.send(`${nomeUsuario} abaixou a mão`);
+                    contadorMaosLevantadas--;
+                }
+                updateMaoIcon();
+            }
+
+            function updateMaoIcon() {
+                const maoIcon = document.getElementById("maoIcon");
+                maoIcon.innerHTML = "🖐️".repeat(contadorMaosLevantadas);
+                maoIcon.style.display =
+                    contadorMaosLevantadas > 0 ? "inline-block" : "none";
+            }
         </script>
     </head>
     <body>
@@ -391,7 +442,11 @@
                 placeholder="Digite sua mensagem..."
             />
             <button id="enviar">Enviar</button>
+            <button id="levantarMaoButton" onclick="toggleMao()">
+                Levantar a Mão
+            </button>
             <button onclick="voltarParaEscolha()">Voltar para Escolha</button>
+            <div id="maoIcon" style="display: none">🖐️</div>
         </div>
 
         <div id="telaListaSalas" style="display: none">
