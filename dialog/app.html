@@ -52,16 +52,13 @@
                 background-color: #4caf50;
                 color: #fff;
                 border: none;
-                border-radius: 5px;
+                border-radius: 6px;
                 cursor: pointer;
+                margin-right: 0.4rem;
             }
 
             button:hover {
                 background-color: #45a049;
-            }
-
-            #enviar {
-                margin-right: 10px;
             }
 
             .loader {
@@ -140,34 +137,16 @@
                         audio: false,
                     });
                     localVideo = document.getElementById("localVideo");
+                    localVideo.style.display = "block";
                     localVideo.srcObject = localStream;
                 } catch (error) {
                     console.error("Erro ao capturar vídeo:", error);
                 }
             }
 
-            function adicionarVideo(stream) {
-                var newVideo = document.createElement("video");
-                newVideo.srcObject = stream;
-                newVideo.autoplay = true;
-                newVideo.playsinline = true;
-                videoContainer.appendChild(newVideo);
-            }
+            function adicionarVideo() {}
 
-            function removerVideo(nomeParticipante) {
-                var videos = document.querySelectorAll("video");
-                videos.forEach(function (video) {
-                    if (
-                        video.srcObject &&
-                        video.srcObject.id === nomeParticipante
-                    ) {
-                        video.srcObject.getTracks().forEach(function (track) {
-                            track.stop();
-                        });
-                        video.remove();
-                    }
-                });
-            }
+            function removerVideo() {}
 
             async function entrarNaSala() {
                 nome = prompt("Digite seu nome:");
@@ -270,7 +249,7 @@
                     document.getElementById("chat").appendChild(div);
 
                     if (mensagem.includes("Entrou na sala")) {
-                        exibirDispositivos();
+                        adicionarVideo();
                     } else if (mensagem.includes("saiu da sala")) {
                         removerVideo();
                     }
@@ -363,6 +342,7 @@
 
                         var submitButton = document.createElement("button");
                         submitButton.textContent = "Selecionar Câmera";
+                        submitButton.style.marginLeft = "0.5rem";
                         submitButton.onclick = function () {
                             var selectedDeviceId = select.value;
                             iniciarVideo(selectedDeviceId);
@@ -442,10 +422,10 @@
                 placeholder="Digite sua mensagem..."
             />
             <button id="enviar">Enviar</button>
+            <button onclick="voltarParaEscolha()">Voltar para Escolha</button>
             <button id="levantarMaoButton" onclick="toggleMao()">
                 Levantar a Mão
             </button>
-            <button onclick="voltarParaEscolha()">Voltar para Escolha</button>
             <div id="maoIcon" style="display: none">🖐️</div>
         </div>
 
@@ -458,7 +438,7 @@
         <div id="cameraContainer"></div>
 
         <div id="videos">
-            <video id="localVideo" autoplay muted></video>
+            <video id="localVideo" style="display: none" autoplay muted></video>
         </div>
     </body>
 </html>
