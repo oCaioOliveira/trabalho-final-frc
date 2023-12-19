@@ -121,6 +121,11 @@
         </style>
         <script>
             var socket;
+            var socketVideo;
+            var localVideo;
+            var remoteVideo;
+            var localStreamVideo;
+            var peerConnection;
             var nome;
             var cor;
             var salaAtual;
@@ -129,24 +134,6 @@
             let contadorMaosLevantadas = 0;
             var localVideo = document.getElementById("localVideo");
             var videoContainer = document.getElementById("videos");
-
-            async function iniciarVideo(deviceId) {
-                try {
-                    localStream = await navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: { exact: deviceId } },
-                        audio: false,
-                    });
-                    localVideo = document.getElementById("localVideo");
-                    localVideo.style.display = "block";
-                    localVideo.srcObject = localStream;
-                } catch (error) {
-                    console.error("Erro ao capturar vídeo:", error);
-                }
-            }
-
-            function adicionarVideo() {}
-
-            function removerVideo() {}
 
             async function entrarNaSala() {
                 nome = prompt("Digite seu nome:");
@@ -180,6 +167,7 @@
                     "inline-block";
 
                 socket = new WebSocket(`ws://localhost:8765/${sala}`);
+                socketVideo = new WebSocket(`ws://localhost:8767/${sala}`);
 
                 socket.onopen = function (event) {
                     console.log("Conexão aberta");
@@ -227,6 +215,8 @@
                     document.getElementById("telaEscolha").style.display =
                         "none";
                     document.getElementById("telaChat").style.display = "block";
+                    document.getElementById("telaVideo").style.display =
+                        "block";
                     document.getElementById("salaNome").innerText = sala;
                     exibirMensagem(mensagem, cor);
                 }
@@ -247,15 +237,126 @@
                     div.textContent = mensagem;
                     div.style.color = cor || "black";
                     document.getElementById("chat").appendChild(div);
-
-                    if (mensagem.includes("Entrou na sala")) {
-                        adicionarVideo();
-                    } else if (mensagem.includes("saiu da sala")) {
-                        removerVideo();
-                    }
                 }
 
-                exibirDispositivos();
+                socketVideo.onopen = () => {
+                    console.log("WebSocket Connected");
+                };
+
+                socketVideo.onmessage = async (event) => {
+                    var data = JSON.parse(event.data);
+                    if (data.offer) {
+                        await handleOffer(data.offer);
+                    } else if (data.answer) {
+                        await handleAnswer(data.answer);
+                    } else if (data.ice) {
+                        peerConnection.addIceCandidate(
+                            new RTCIceCandidate(data.ice)
+                        );
+                    }
+                };
+
+                async function handleOffer(offer) {
+                    await peerConnection.setRemoteDescription(
+                        new RTCSessionDescription(offer)
+                    );
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    socketVideo.send(JSON.stringify({ answer: answer }));
+                }
+
+                async function handleAnswer(answer) {
+                    await peerConnection.setRemoteDescription(
+                        new RTCSessionDescription(answer)
+                    );
+                }
+            }
+
+            async function startWebRTC(isCaller, deviceId) {
+                localVideo = document.getElementById("localVideo");
+                remoteVideo = document.getElementById("remoteVideo");
+
+                localStreamVideo = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        deviceId: deviceId ? { exact: deviceId } : undefined,
+                    },
+                    audio: true,
+                });
+                localVideo.srcObject = localStreamVideo;
+
+                peerConnection = new RTCPeerConnection();
+
+                localStreamVideo.getTracks().forEach((track) => {
+                    peerConnection.addTrack(track, localStreamVideo);
+                });
+
+                peerConnection.ontrack = (event) => {
+                    remoteVideo.srcObject = event.streams[0];
+                };
+
+                peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        socketVideo.send(
+                            JSON.stringify({ ice: event.candidate })
+                        );
+                    }
+                };
+
+                if (isCaller) {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    socketVideo.send(JSON.stringify({ offer: offer }));
+                }
+                document.getElementById("chatVideo").style.display = "block";
+            }
+
+            document.addEventListener("DOMContentLoaded", async () => {
+                try {
+                    const devices =
+                        await navigator.mediaDevices.enumerateDevices();
+                    const videoDevices = devices.filter(
+                        (device) => device.kind === "videoinput"
+                    );
+                    const cameraSelect =
+                        document.getElementById("cameraSelect");
+                    videoDevices.forEach((device) => {
+                        const option = document.createElement("option");
+                        option.value = device.deviceId;
+                        option.text =
+                            device.label || `Câmera ${cameraSelect.length + 1}`;
+                        cameraSelect.appendChild(option);
+                    });
+                } catch (error) {
+                    console.error(
+                        "Erro ao listar dispositivos de câmera:",
+                        error
+                    );
+                }
+            });
+
+            async function selectCamera() {
+                if (localStreamVideo) {
+                    localStreamVideo
+                        .getTracks()
+                        .forEach((track) => track.stop());
+                }
+                const cameraId = document.getElementById("cameraSelect").value;
+                localStreamVideo = await navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: cameraId } },
+                    audio: true,
+                });
+                localVideo.srcObject = localStreamVideo;
+
+                // Atualizar as trilhas no peerConnection
+                const senders = peerConnection.getSenders();
+                localStreamVideo.getTracks().forEach((track) => {
+                    const sender = senders.find(
+                        (s) => s.track.kind === track.kind
+                    );
+                    if (sender) {
+                        sender.replaceTrack(track);
+                    }
+                });
             }
 
             function listarSalasESelecionar() {
@@ -322,43 +423,6 @@
                 });
             }
 
-            function exibirDispositivos() {
-                navigator.mediaDevices
-                    .enumerateDevices()
-                    .then(function (devices) {
-                        var videoDevices = devices.filter(
-                            (device) => device.kind === "videoinput"
-                        );
-                        var select = document.createElement("select");
-                        select.setAttribute("id", "cameraSelect");
-
-                        videoDevices.forEach(function (device) {
-                            var option = document.createElement("option");
-                            option.value = device.deviceId;
-                            option.text =
-                                device.label || `Câmera ${select.length + 1}`;
-                            select.appendChild(option);
-                        });
-
-                        var submitButton = document.createElement("button");
-                        submitButton.textContent = "Selecionar Câmera";
-                        submitButton.style.marginLeft = "0.5rem";
-                        submitButton.onclick = function () {
-                            var selectedDeviceId = select.value;
-                            iniciarVideo(selectedDeviceId);
-                        };
-
-                        var cameraContainer =
-                            document.getElementById("cameraContainer");
-                        cameraContainer.innerHTML = "";
-                        cameraContainer.appendChild(select);
-                        cameraContainer.appendChild(submitButton);
-                    })
-                    .catch(function (error) {
-                        console.error("Erro ao obter dispositivos:", error);
-                    });
-            }
-
             function voltarParaEscolha() {
                 if (socket && salaAtual) {
                     socket.send(`${nome} saiu da sala ${salaAtual}.`);
@@ -368,6 +432,7 @@
                     div.textContent = `Fim de histórico da sala ${salaAtual}.`;
                     div.style.color = cor || "red";
                     socket = null;
+                    socketVideo = null;
                     salaAtual = null;
                     document.getElementById("chat").appendChild(div);
                     document.getElementById("loader").style.display = "none";
@@ -375,6 +440,8 @@
 
                 document.getElementById("telaEscolha").style.display = "block";
                 document.getElementById("telaChat").style.display = "none";
+                document.getElementById("telaVideo").style.display = "none";
+                document.getElementById("chatVideo").style.display = "none";
             }
 
             function toggleMao() {
@@ -396,6 +463,39 @@
                     contadorMaosLevantadas--;
                 }
                 updateMaoIcon();
+            }
+
+            function toggleMute() {
+                if (!localStream) return;
+
+                const audioTracks = localStream.getAudioTracks();
+                if (audioTracks.length === 0) return;
+
+                audioTracks[0].enabled = !audioTracks[0].enabled;
+
+                const muteButton = document.getElementById("muteButton");
+                if (audioTracks[0].enabled) {
+                    muteButton.textContent = "Mutar";
+                } else {
+                    muteButton.textContent = "Desmutar";
+                }
+            }
+
+            function toggleCamera() {
+                if (!localStream) return;
+
+                const videoTracks = localStream.getVideoTracks();
+                if (videoTracks.length === 0) return;
+
+                videoTracks[0].enabled = !videoTracks[0].enabled;
+
+                const toggleCameraButton =
+                    document.getElementById("toggleCameraButton");
+                if (videoTracks[0].enabled) {
+                    toggleCameraButton.textContent = "Desligar Câmera";
+                } else {
+                    toggleCameraButton.textContent = "Ligar Câmera";
+                }
             }
 
             function updateMaoIcon() {
@@ -435,10 +535,21 @@
             <div id="loader" class="loader"></div>
         </div>
 
-        <div id="cameraContainer"></div>
+        <div id="telaVideo" style="display: none">
+            <h1>Chat de Vídeo</h1>
+            <select id="cameraSelect" onchange="selectCamera()"></select>
+            <button onclick="startWebRTC(true)">Iniciar Chamada</button>
+            <br />
+        </div>
+        <div id="chatVideo" style="display: none">
+            <button id="muteButton" onclick="toggleMute()">Mutar</button>
+            <button id="toggleCameraButton" onclick="toggleCamera()">
+                Desligar Câmera
+            </button>
 
-        <div id="videos">
-            <video id="localVideo" style="display: none" autoplay muted></video>
+            <br />
+            <video id="localVideo" autoplay muted></video>
+            <video id="remoteVideo" autoplay></video>
         </div>
     </body>
 </html>
