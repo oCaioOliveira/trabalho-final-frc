@@ -11,6 +11,10 @@ Guilherme Nishimura | 200030264 |
 Matheus Costa Gomes | 190093331 |
 Vitor Eduardo Kühl Rodrigues | 190118288 |
 
+## Exemplo de Usabilidade
+
+https://github.com/oCaioOliveira/trabalho-final-frc/assets/54439337/bad066f2-bd6e-4347-ab13-cb023a4fa0a5
+
 ## Intruções para rodar a aplicação
 
 ### Instalação do servidor 
