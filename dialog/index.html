@@ -366,9 +366,10 @@
             }
 
             function toggleCamera() {
-                if (!localStream) return;
+                if (!localStreamVideo) return;
+        
+                const videoTracks = localStreamVideo.getVideoTracks();
 
-                const videoTracks = localStream.getVideoTracks();
                 if (videoTracks.length === 0) return;
 
                 videoTracks[0].enabled = !videoTracks[0].enabled;
